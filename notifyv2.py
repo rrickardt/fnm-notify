@@ -11,13 +11,10 @@ import subprocess
 
 LOG_FILE = "/var/log/fastnetmon-notify.log"
 MAIL_HOSTNAME="localhost"
-MAIL_FROM="root@flow.in.o2bs.sk"
-#MAIL_TO="bohuslav.plucinsky@o2.sk,rastislav.rickardt@o2bs.sk"
-MAIL_TO="rastislav.rickardt@o2bs.sk"
+MAIL_FROM="root@example.com"
+MAIL_TO="root@example.com"
 
-
-#sendmailto=['bohuslav.plucinsky@o2.sk', 'rastislav.rickardt@o2bs.sk']
-sendmailto=['rastislav.rickardt@o2bs.sk']
+sendmailto=['root@example.com']
 
 
 logger = logging.getLogger("DaemonLog")
