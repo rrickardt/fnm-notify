@@ -7,12 +7,19 @@ import optparse
 import sys
 import logging
 import redis
+import subprocess
 
 LOG_FILE = "/var/log/fastnetmon-notify.log"
 MAIL_HOSTNAME="localhost"
-MAIL_FROM="root@localhost"
-MAIL_TO="first@email.add,second@email.add"
-sendmailto=['first@email.add', 'second@email.add']
+MAIL_FROM="root@flow.in.o2bs.sk"
+#MAIL_TO="bohuslav.plucinsky@o2.sk,rastislav.rickardt@o2bs.sk"
+MAIL_TO="rastislav.rickardt@o2bs.sk"
+
+
+#sendmailto=['bohuslav.plucinsky@o2.sk', 'rastislav.rickardt@o2bs.sk']
+sendmailto=['rastislav.rickardt@o2bs.sk']
+
+
 logger = logging.getLogger("DaemonLog")
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -42,7 +49,10 @@ def setban(client_ip_as_string):
        proto =  str(flow[2]).split(':')[1]
        flags =  str(flow[3]).split(':')[1]
        #flags are unused for now
-       output.append (addrule %(srcip, srcport, dstip, dstport, proto))
+#       output.append (addrule %(srcip, srcport, dstip, dstport, proto))
+       cmdout = ['gobgp', 'global', 'rib', '-a', 'flowvpn4', 'add', 'rd', '28952:2', 'match', 'source', srcip + '/32', 'source-port', srcport, 'destination', dstip+'/32', 'destination-port', dstport, 'protocol', proto, 'then', 'discard']
+#       output.append(['gobgp', 'global', 'rib', '-a', 'flowvpn4', 'add', 'rd', '28952:2', 'match', 'source', srcip + '/32', 'source-port', srcport, 'destination', dstip+'/32', 'destination-port', dstport, 'protocol', proto, 'then', 'discard'])
+       output.append(cmdout)
     return output
 
 
@@ -69,7 +79,9 @@ def makeredisrule(action):
         dport = tuple[1].split(':')[1]
         proto = tuple[2].split(':')[1]
         flags = tuple[3].split(':')[1]
-        cmd.append (addrule %(act, srcip, sport, dstip, dport, proto))
+       # cmd.append (addrule %(act, srcip, sport, dstip, dport, proto))
+        cmd.append(['gobgp', 'global', 'rib', '-a', 'flowvpn4', act, 'rd', '28952:2', 'match', 'source', srcip+'/32', 'source-port', sport, 'destination', dstip+'/32', 'destination-port', dport, 'protocol', proto, 'then', 'discard'])
+#    print cmd
     return cmd
 
 def mail(subject, body):
@@ -104,7 +116,12 @@ if action == "unban":
         'action' : action
     }
 
-    mail(subject, str(makeredisrule(action)))
+#    mail(subject, "unban")
+#    mail(subject, str(makeredisrule(action)))
+    for line in makeredisrule(action):
+       subprocess.call(line) 
+#    print makeredisrule(action)
+
     sys.exit(0)
 elif action == "ban":
     subject = "Flowmon: IP %(client_ip_as_string)s information, %(data_direction)s attack with power %(pps_as_string)d pps" % {
@@ -115,7 +132,9 @@ elif action == "ban":
     }
 
     body = "".join(sys.stdin.readlines())
+#    body = "test"
     mail(subject, body)
+    
 
     sys.exit(0)
 elif action == "attack_details":
@@ -125,9 +144,15 @@ elif action == "attack_details":
         'pps_as_string' : pps_as_string,
         'action' : action
     }
-    body =  str(setban(client_ip_as_string))
+#    body = "".join(sys.stdin.readlines())
+    
+#    body =  str(setban(client_ip_as_string))
+#    body = setban(client_ip_as_string)
+#    mail(subject, body)
+#    print body 
+    for line in setban(client_ip_as_string):
+       subprocess.call(line)
 
-    mail(subject, body)
     sys.exit(0)
 else:
     sys.exit(0)
